@@ -37,7 +37,8 @@ class AnxietyDataset(Dataset):
         }
 
 # Load dataset
-dataset = AnxietyDataset("data/mental_health_combined_test.csv", tokenizer, MAX_LEN)
+DATA_PATH = "/content/drive/MyDrive/AI-Anxiety-Data/mental_health_combined_test.csv"
+dataset = AnxietyDataset(DATA_PATH, tokenizer, MAX_LEN)
 
 # Train/validation split
 train_size = int(0.8 * len(dataset))
@@ -101,5 +102,6 @@ with torch.no_grad():
 print("Validation Accuracy:", correct / total)
 
 # Cell 5
-torch.save(model.state_dict(), "model/bert_anxiety_model.pt")
-print("Model saved to model/bert_anxiety_model.pt")
+MODEL_PATH = "/content/drive/MyDrive/AI-Anxiety-Data/bert_anxiety_model.pt"
+torch.save(model.state_dict(), MODEL_PATH)
+print(f"Model saved to {MODEL_PATH}")
