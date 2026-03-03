@@ -22,7 +22,7 @@ class AnxietyDataset(Dataset):
 
     def __getitem__(self, idx):
         text = str(self.df.loc[idx, "text"])
-        label = int(self.df.loc[idx, "label"])
+        label = int(self.df.loc[idx, "status"])
         encoding = self.tokenizer(
             text,
             padding="max_length",
