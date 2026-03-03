@@ -14,6 +14,9 @@ tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 class AnxietyDataset(Dataset):
     def __init__(self, csv_path, tokenizer, max_len=128):
         self.df = pd.read_csv(csv_path)
+        # Rename status -> label so rest of code can use 'label'
+        if "status" in self.df.columns:
+            self.df = self.df.rename(columns={"status": "label"})
         self.tokenizer = tokenizer
         self.max_len = max_len
 
@@ -22,7 +25,7 @@ class AnxietyDataset(Dataset):
 
     def __getitem__(self, idx):
         text = str(self.df.loc[idx, "text"])
-        label = int(self.df.loc[idx, "status"])
+        label = int(self.df.loc[idx, "label"])  # always safe now
         encoding = self.tokenizer(
             text,
             padding="max_length",
@@ -35,7 +38,6 @@ class AnxietyDataset(Dataset):
             "attention_mask": encoding["attention_mask"].squeeze(0),
             "labels": torch.tensor(label, dtype=torch.long)
         }
-
 # Load dataset
 DATA_PATH = "/content/drive/MyDrive/AI-Anxiety-Data/mental_health_combined_test.csv"
 dataset = AnxietyDataset(DATA_PATH, tokenizer, MAX_LEN)
@@ -54,7 +56,8 @@ print("Using device:", DEVICE)
 
 model = BertForSequenceClassification.from_pretrained(
     "bert-base-uncased",
-    num_labels=3  # change to your dataset classes
+    num_labels=3,               # keep your number of classes
+    ignore_mismatched_sizes=True  # add this to suppress the UNEXPECTED/MISSING warnings
 )
 model = model.to(DEVICE)
 
