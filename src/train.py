@@ -1,59 +1,105 @@
-# src/train.py
+# Cell 1
 import torch
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW
-from torch.utils.data import DataLoader, Dataset
-import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader, random_split
+from torch import nn
+from torch.optim import AdamW
+import pandas as pd
+from transformers import BertTokenizer, BertForSequenceClassification
 
-# Dummy dataset example
-class TextDataset(Dataset):
-    def __init__(self, texts, labels, tokenizer, max_len=32):
-        self.texts = texts
-        self.labels = labels
+# Tokenizer
+MAX_LEN = 128
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+
+# Dataset class
+class AnxietyDataset(Dataset):
+    def __init__(self, csv_path, tokenizer, max_len=128):
+        self.df = pd.read_csv(csv_path)
         self.tokenizer = tokenizer
         self.max_len = max_len
 
     def __len__(self):
-        return len(self.texts)
+        return len(self.df)
 
     def __getitem__(self, idx):
+        text = str(self.df.loc[idx, "text"])
+        label = int(self.df.loc[idx, "label"])
         encoding = self.tokenizer(
-            self.texts[idx],
-            max_length=self.max_len,
-            padding='max_length',
+            text,
+            padding="max_length",
             truncation=True,
-            return_tensors='pt'
+            max_length=self.max_len,
+            return_tensors="pt"
         )
         return {
-            'input_ids': encoding['input_ids'].squeeze(),
-            'attention_mask': encoding['attention_mask'].squeeze(),
-            'labels': torch.tensor(self.labels[idx], dtype=torch.long)
+            "input_ids": encoding["input_ids"].squeeze(0),
+            "attention_mask": encoding["attention_mask"].squeeze(0),
+            "labels": torch.tensor(label, dtype=torch.long)
         }
 
-# Initialize
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)
+# Load dataset
+dataset = AnxietyDataset("data/mental_health_combined_test.csv", tokenizer, MAX_LEN)
 
-# Dummy data
-texts = ["I am anxious", "Feeling calm"]
-labels = [1, 0]  # 1 = anxious, 0 = calm
-dataset = TextDataset(texts, labels, tokenizer)
-loader = DataLoader(dataset, batch_size=2)
+# Train/validation split
+train_size = int(0.8 * len(dataset))
+val_size = len(dataset) - train_size
+train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-optimizer = AdamW(model.parameters(), lr=5e-5)
+train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=8)
 
-# Training loop
-model.train()
-for epoch in range(2):  # small number for testing
-    for batch in loader:
+# Cell 2
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device:", DEVICE)
+
+model = BertForSequenceClassification.from_pretrained(
+    "bert-base-uncased",
+    num_labels=3  # change to your dataset classes
+)
+model = model.to(DEVICE)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = AdamW(model.parameters(), lr=2e-5)
+
+# Cell 3
+EPOCHS = 2
+
+for epoch in range(EPOCHS):
+    model.train()
+    total_loss = 0
+    for batch in train_loader:
         optimizer.zero_grad()
-        outputs = model(input_ids=batch['input_ids'],
-                        attention_mask=batch['attention_mask'],
-                        labels=batch['labels'])
-        loss = outputs.loss
-        print(f"Epoch {epoch}, Loss: {loss.item()}")
+        input_ids = batch["input_ids"].to(DEVICE)
+        attention_mask = batch["attention_mask"].to(DEVICE)
+        labels = batch["labels"].to(DEVICE)
+
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        logits = outputs.logits
+        loss = criterion(logits, labels)
         loss.backward()
         optimizer.step()
 
-# Save model
-torch.save(model.state_dict(), '../model/bert_anxiety_model.pt')
-print("Model saved!")
+        total_loss += loss.item()
+
+    print(f"Epoch {epoch+1}/{EPOCHS} - Loss: {total_loss/len(train_loader):.4f}")
+
+    # Cell 4
+model.eval()
+correct = 0
+total = 0
+with torch.no_grad():
+    for batch in val_loader:
+        input_ids = batch["input_ids"].to(DEVICE)
+        attention_mask = batch["attention_mask"].to(DEVICE)
+        labels = batch["labels"].to(DEVICE)
+
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        logits = outputs.logits
+        preds = torch.argmax(logits, dim=1)
+        correct += (preds == labels).sum().item()
+        total += labels.size(0)
+
+print("Validation Accuracy:", correct / total)
+
+# Cell 5
+torch.save(model.state_dict(), "model/bert_anxiety_model.pt")
+print("Model saved to model/bert_anxiety_model.pt")
