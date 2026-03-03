@@ -14,9 +14,7 @@ tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 class AnxietyDataset(Dataset):
     def __init__(self, csv_path, tokenizer, max_len=128):
         self.df = pd.read_csv(csv_path)
-        # Rename status -> label so rest of code can use 'label'
-        if "status" in self.df.columns:
-            self.df = self.df.rename(columns={"status": "label"})
+       
         self.tokenizer = tokenizer
         self.max_len = max_len
 
