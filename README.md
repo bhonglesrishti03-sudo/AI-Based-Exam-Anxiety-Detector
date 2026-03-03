@@ -152,7 +152,7 @@ Understanding class distribution is essential to prevent model bias.
 
 # Data Processing & Label Mapping
 
-3.2 Original Dataset Labels
+# 3.2 Original Dataset Labels
 
 The original dataset consists of multiple mental-health categories representing different emotional and psychological states, including:
 
@@ -172,7 +172,7 @@ Personality Disorder
 
 These labels reflect clinical or psychological conditions, whereas the goal of this project is to analyze exam-related anxiety levels, not to perform medical diagnosis.
 
-3.3 Custom Label Mapping Strategy
+# 3.3 Custom Label Mapping Strategy
 
 A custom label-mapping strategy is designed based on emotional intensity and severity.
 
@@ -230,7 +230,7 @@ Eliminates local hardware limitations
 
 Ensures reproducibility of training
 
-4.4 — Text Preprocessing with BERT Tokenizer
+# 4.4 — Text Preprocessing with BERT Tokenizer
 
 Before the model can understand text, raw strings need to be converted into numbers that BERT can work with. Here’s what happens:
 
@@ -242,7 +242,7 @@ Truncation/Padding → Makes all sequences the same length (so batches can be pr
 
  Why this is important: BERT can’t work with plain strings—it expects fixed-size numerical inputs. This step ensures the data is compatible with the model.
 
-4.5 — Training Setup (train.py)
+# 4.5 — Training Setup (train.py)
 
 Once tokenized, the data enters the training loop implemented in PyTorch. Key points:
 
@@ -254,3 +254,89 @@ Epochs	Multiple passes over the dataset → helps model learn better
 Goal	The model learns to map linguistic patterns to anxiety levels
 
  Tip: Always monitor loss & accuracy per epoch so you know if the model is actually learning. If loss plateaus or spikes, tweak learning rate or batch size.
+
+ #  Inference & Real-Time Prediction
+
+# Activity 5.1: Switching Model to Inference Mode
+
+Goal: After training, we only need the model for predictions, not for learning.
+
+Key Steps:
+
+Load the saved model (bert_anxiety_model.pt) and tokenizer.
+
+Switch the model to evaluation mode using model.eval().
+
+Disable gradient calculations with torch.no_grad() to save memory and speed up inference.
+
+Outcome:
+
+Model no longer updates weights.
+
+Predictions are stable and efficient.
+
+Interview explanation: “We freeze the model and turn off gradients to ensure fast, memory-efficient predictions during inference.”
+
+# Activity 5.2: Real-Time Prediction Testing
+
+Goal: Test how the model performs on real, manually written exam-related sentences.
+
+Key Steps:
+
+Write example inputs: calm/confident, nervous/stressed, highly anxious/panic-driven.
+
+Tokenize and encode the sentences.
+
+Pass them through the model to get predicted anxiety levels.
+
+Map predicted indices back to labels (Low, Moderate, High).
+
+Outcome:
+
+Observed that predictions match human intuition.
+
+Validated the model’s ability to differentiate between different anxiety levels.
+
+Interview explanation: “We verified the model on real-world exam-related text to ensure it aligns with human judgment.”
+
+# Activity 5.3: Backend API Validation
+
+Goal: Integrate the trained model with the backend and make it accessible to a frontend.
+
+Key Steps:
+
+Load the model in FastAPI backend.
+
+Expose an endpoint (e.g., /predict) that accepts text input.
+
+Test via Swagger UI and Streamlit frontend.
+
+Outcome:
+
+Backend loads the model correctly.
+
+API returns valid predictions.
+
+Frontend receives and displays predictions properly.
+
+Interview explanation: “We ensured that the ML model works in real-time when called from an API and integrates smoothly with the frontend.”
+
+# Activity 5.4: Output Consistency Analysis
+
+Goal: Confirm the model’s predictions are consistent and logical.
+
+Key Steps:
+
+Use multiple test sentences to cover different anxiety patterns.
+
+Check that similar inputs give similar predictions.
+
+Ensure predictions progress logically from Low → Moderate → High anxiety.
+
+Outcome:
+
+Predictions are mostly stable.
+
+Minor variations are expected due to overlapping emotional language.
+
+Model can be considered reliable for deployment.
