@@ -18,7 +18,7 @@ class AnxietyDataset(Dataset):
         self.max_len = max_len
 
         # Map string labels to integers
-        self.label2id = {label: idx for idx, label in enumerate(self.df['status'].unique())}
+        self.label2id = {label: idx for idx, label in enumerate(sorted(self.df['status'].unique()))}
         self.id2label = {v: k for k, v in self.label2id.items()}
 
     def __len__(self):
@@ -42,7 +42,7 @@ class AnxietyDataset(Dataset):
             "attention_mask": encoding["attention_mask"].squeeze(0),
             "labels": torch.tensor(label, dtype=torch.long)
         }
-   
+
 # Load dataset
 DATA_PATH = "/content/drive/MyDrive/AI-Anxiety-Data/mental_health_combined_test.csv"
 dataset = AnxietyDataset(DATA_PATH, tokenizer, MAX_LEN)
@@ -55,11 +55,12 @@ train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8)
 
+
 # Cell 2
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", DEVICE)
 
-num_classes = len(pd.read_csv(DATA_PATH)['status'].unique())
+num_classes = len(dataset.label2id)  # number of unique labels
 
 model = BertForSequenceClassification.from_pretrained(
     "bert-base-uncased",
@@ -70,6 +71,7 @@ model = model.to(DEVICE)
 
 criterion = nn.CrossEntropyLoss()
 optimizer = AdamW(model.parameters(), lr=2e-5)
+
 
 # Cell 3
 EPOCHS = 2
@@ -93,7 +95,8 @@ for epoch in range(EPOCHS):
 
     print(f"Epoch {epoch+1}/{EPOCHS} - Loss: {total_loss/len(train_loader):.4f}")
 
-    # Cell 4
+
+# Cell 4
 model.eval()
 correct = 0
 total = 0
@@ -110,6 +113,7 @@ with torch.no_grad():
         total += labels.size(0)
 
 print("Validation Accuracy:", correct / total)
+
 
 # Cell 5
 MODEL_PATH = "/content/drive/MyDrive/AI-Anxiety-Data/bert_anxiety_model.pt"
